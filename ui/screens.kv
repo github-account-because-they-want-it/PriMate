@@ -1,0 +1,99 @@
+#:kivy 1.8.0
+
+#:import path os.path
+
+#:set resource_dir "res"
+#:set image_dir "res/images"
+#:set video_dir "res/videos"
+
+<SubjectButton>:
+  size_hint_y: None
+  height: 40
+
+
+<SubjectScreen>:
+
+  BoxLayout:
+
+    orientation: "vertical"
+
+    Label:
+      text: "Choose Subject:"
+      font_size: "16sp"
+      bold: True
+
+
+    BoxLayout:
+      Widget:
+
+      BoxLayout:
+
+        id: subject_container
+        orientation: "vertical"
+        padding_horizontal: 20
+        spacing: 12
+
+      Widget:
+
+<StartTrialScreen>:
+
+  AnchorLayout:
+    anchor_x: "center"
+    anchor_y: "center"
+
+    Button:
+      text: "Start Trial"
+      size_hint: 0.25, 0.25
+      on_press: root.manager.current = "trial"
+
+
+<TrialScreen>:
+
+  BoxLayout:
+    orientation: "vertical"
+    spacing: 10
+
+    BoxLayout:
+
+      TouchAwareWidget:
+        on_really_touch_down: root.on_background_touched(args[1])
+
+      TouchAwareVideo:
+        id: video_condition
+        size_hint_x: 3
+        on_really_touch_down: root.on_video_touched(args[1])
+
+      TouchAwareWidget:
+        on_really_touch_down: root.on_background_touched(args[1])
+
+    BoxLayout:
+
+      TouchAwareImage:
+        id: image_place_1
+
+      TouchAwareImage:
+        id: image_place_2
+
+      TouchAwareImage:
+        id: image_place_3
+
+      TouchAwareImage:
+        id: image_place_4
+
+      TouchAwareImage:
+        id: image_place_5
+
+      TouchAwareImage:
+        id: image_place_6
+
+      TouchAwareImage:
+        id: image_place_7
+
+
+<ConditionCompleteScreen>:
+
+  BoxLayout:
+    orientation: "vertical"
+
+    Label:
+      id: label_condition

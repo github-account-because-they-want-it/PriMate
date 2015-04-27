@@ -1,0 +1,7 @@
+.idea
+*.py[cdo]
+*.mp4
+*.mov
+*.rar
+*.zip
+description/

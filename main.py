@@ -239,7 +239,7 @@ class PriMateApp(App):
     # this blocks the UI
     for _ in range(count):
       dispense_pellet()
-      time.sleep(self._inter_pillet_wait_seconds)
+      time.sleep(self._inter_pellet_wait_seconds)
 
   def _restart_trial(self, elapsed):
     if self._index_current_trial == self._total_trial_count:

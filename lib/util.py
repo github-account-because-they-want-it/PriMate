@@ -4,12 +4,15 @@ from os.path import dirname, join, splitext, basename
 from os import listdir
 from random import choice
 from datetime import datetime
-import csv
+import csv, subprocess, sys
+
+_config_dir = join(dirname(dirname(__file__)), "config")
 
 def dispense_pellet():
-  import serial
-  port_dispenser = serial.Serial(port=2, baudrate=19200, bytesize=8, parity='N')
-  port_dispenser.write("p1")
+  batch_despenser = join(_config_dir, "dispenser.bat")
+  process = subprocess.Popen(batch_despenser, stdout=subprocess.PIPE)
+  output = process.communicate()
+  sys.stderr.write(str(output))
 
 def get_video_dir():
   return join(dirname(dirname(__file__)), "res", "videos")

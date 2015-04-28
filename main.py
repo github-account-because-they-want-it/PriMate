@@ -1,7 +1,8 @@
 __author__ = 'Mohammed Hamdy'
 
 from os.path import dirname, join
-import csv, time, random
+import csv, random
+from functools import partial
 from datetime import datetime
 from kivy.app import App
 from kivy.lang import Builder
@@ -24,9 +25,9 @@ class SubjectScreen(Screen):
     super(SubjectScreen, self).__init__(*args, **kwargs)
     # emit an event when a subject button is pressed
     self.register_event_type("on_subject_selected")
-    # fill out the subjects screen from subjects.csv
+    # fill out the subjects screen from subjects.json
     subject_container = self.ids.subject_container
-    name_config_file = join(dirname(__file__), "config", "subjects.csv")
+    name_config_file = join(dirname(__file__), "config", "subjects.json")
     for subject in subject_reader.get_subjects():
       button_subject = SubjectButton(text=subject)
       if subject_reader.is_subject_done(subject):
@@ -73,10 +74,12 @@ class TrialScreen(Screen):
     self._image_right_card = None
 
   def left_card_selected(self, image, touch):
+    self._enable_cards(False)
     self._image_right_card.opacity = 0
     self.dispatch("on_left_card_chosen", self._calculate_time_till_choice())
 
   def right_card_selected(self, image, touch):
+    self._enable_cards(False)
     self._image_left_card.opacity = 0
     self.dispatch("on_right_card_chosen", self._calculate_time_till_choice())
 
@@ -96,8 +99,8 @@ class TrialScreen(Screen):
 
   def on_pre_enter(self):
     if self._image_left_card is not None: # at first time the trial screen is shown
-      self._image_left_card.opacity = 1
-      self._image_right_card.opacity = 1
+      self._enable_cards(True)
+      self._show_cards(True)
     # randomize the placement of cards and bind images without content as background touches
     image_places = self._get_image_places()
     image_index_left, image_index_right = 0, 0
@@ -138,6 +141,18 @@ class TrialScreen(Screen):
     return [self.ids.image_place_1, self.ids.image_place_2, self.ids.image_place_3, self.ids.image_place_4,
             self.ids.image_place_5, self.ids.image_place_6, self.ids.image_place_7]
 
+  def _enable_cards(self, status):
+    self._image_left_card.disabled = not status
+    self._image_right_card.disabled = not status
+
+  def _show_cards(self, status):
+    if status is True:
+      opacity = 1.0
+    else:
+      opacity = 0
+    self._image_left_card.opacity = opacity
+    self._image_right_card.opacity = opacity
+
 class BlankScreen(Screen):
   pass
 
@@ -170,10 +185,10 @@ class PriMateApp(App):
     super(PriMateApp, self).__init__(*args, **kwargs)
     self._count_left_card_chosen = 0
     self._count_right_card_chosen = 0
-    self._index_current_trial = 0
+    self._index_current_trial = None
     self._csv_reader_non_risky = csv.reader(open(join(dirname(__file__), "config", "EPGT_Payoff.csv"), 'r'))
     self._csv_reader_risky = csv.reader(open(join(dirname(__file__), "config", "EPGT_Payoff_Risky.csv"), 'r'))
-    self._subject_manager = SubjectManager()
+    self._subject_manager = SubjectManager(self._total_trial_count)
     self._current_subject = None
     self._current_condition = None
     self._current_trial_data = None
@@ -204,8 +219,10 @@ class PriMateApp(App):
         csv_writer = csv.writer(stats_file)
         csv_writer.writerow(["Trial Index", "Date", "Time", "Subject", "Condition", "Card Selected", "Background Touches",
                               "Video Touches", "Time till Choice (sec)"])
-    condition_subject = self._subject_manager.get_condition(self._current_subject)
-    self._current_condition = condition_subject.name
+    condition_subject = self._subject_manager.get_unfinished_condition(self._current_subject)
+    self._index_current_trial = condition_subject.next_trial_index
+    self._skip_payoff_lines()
+    self._current_condition = condition_subject
     self.root.get_screen("trial").set_condition(condition_subject)
     self.root.get_screen("condition_complete").set_subject_and_condition(self._current_subject, condition_subject.name)
     self._restart_trial(0)
@@ -214,7 +231,7 @@ class PriMateApp(App):
     # called from kv when left card chosen
     self._update_trial_data(time_till_choice, "Green Card")
     count_pellets = int(next(self._csv_reader_non_risky)[0])
-    self._dispense_pillets(count_pellets)
+    self._dispense_pellets(count_pellets)
     self._count_left_card_chosen += 1
     self._wait_till_five_seconds(count_pellets)
 
@@ -222,7 +239,7 @@ class PriMateApp(App):
     # also called from kv. this is the risky card
     self._update_trial_data(time_till_choice, "Red Card")
     count_pellets = int(next(self._csv_reader_risky)[0])
-    self._dispense_pillets(count_pellets)
+    self._dispense_pellets(count_pellets)
     self._count_right_card_chosen += 1
     self._wait_till_five_seconds(count_pellets)
 
@@ -235,11 +252,10 @@ class PriMateApp(App):
     # keep the blank for 10 seconds
     Clock.schedule_once(self._restart_trial, 10)
 
-  def _dispense_pillets(self, count):
-    # this blocks the UI
-    for _ in range(count):
-      dispense_pellet()
-      time.sleep(self._inter_pellet_wait_seconds)
+  def _dispense_pellets(self, count, tick_time=0):
+    if count == 0: return
+    dispense_pellet()
+    Clock.schedule_once(partial(self._dispense_pellets, count - 1), self._inter_pellet_wait_seconds)
 
   def _restart_trial(self, elapsed):
     if self._index_current_trial == self._total_trial_count:
@@ -247,8 +263,9 @@ class PriMateApp(App):
       self._subject_manager.save()
       self.root.current = "condition_complete"
     else:
-      self._current_trial_data = TrialData(self._current_subject, self._index_current_trial, self._current_condition)
+      self._current_trial_data = TrialData(self._current_subject, self._index_current_trial, self._current_condition.name)
       self.root.current = "start_trial"
+      self._subject_manager.passed_trial(self._current_subject, self._current_condition)
     self._index_current_trial += 1
 
   def _update_trial_data(self, time_till_choice, card_name):
@@ -264,13 +281,22 @@ class PriMateApp(App):
     with open(self._get_stats_file_name(), 'a') as stats_file:
       csv_writer = csv.writer(stats_file)
       trial = self._current_trial_data
-      csv_writer.writerow([trial.trial_index, trial.date, trial.time, trial.subject, trial.condition, trial.card_selected,
+      csv_writer.writerow([trial.trial_index + 1, trial.date, trial.time, trial.subject, trial.condition, trial.card_selected,
                               trial.background_touches, trial.video_touches, trial.time_till_selection])
 
   def _get_stats_file_name(self):
     # stats file name should include the name of the current subject
     return join(dirname(__file__), "config", "stats_{}.csv"
         .format(variablize_string(self._current_subject)))
+
+  def _skip_payoff_lines(self):
+    # match the current payoff with the current index
+    for _ in range(self._index_current_trial):
+      next(self._csv_reader_risky)
+      next(self._csv_reader_non_risky)
+
+  def on_stop(self):
+    self._subject_manager.save()
 
 
 if __name__ == "__main__":

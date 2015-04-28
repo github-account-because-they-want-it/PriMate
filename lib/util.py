@@ -4,7 +4,8 @@ from os.path import dirname, join, splitext, basename
 from os import listdir
 from random import choice
 from datetime import datetime
-import csv, subprocess, sys
+import json, subprocess, sys
+from collections import OrderedDict
 
 _config_dir = join(dirname(dirname(__file__)), "config")
 
@@ -29,45 +30,82 @@ class SubjectManager(object):
   It also has convenience methods for working with subjects
   """
 
-  def __init__(self):
-    self._subjects_file_path = join(dirname(dirname(__file__)), "config", "subjects.csv")
+  def __init__(self, total_trial_count):
+    self._total_trial_count = total_trial_count
+    self._subjects_file_path = join(dirname(dirname(__file__)), "config", "subjects.json")
     dir_conditions = get_video_dir()
-    self._subject_to_conditions_map = {}
     self._full_path_videos = [join(dir_conditions, video_name) for video_name in listdir(dir_conditions)]
-    subjects_csv_reader = csv.reader(open(self._subjects_file_path, 'r', newline=''))
-    for row in subjects_csv_reader:
-      subject_name = row[0]
-      subject_played_conditions = []
-      for played_condition_name in row[1:]:
-        for path_video in self._full_path_videos:
-          if played_condition_name in path_video:
-            subject_played_conditions.append(path_video)
-      self._subject_to_conditions_map[subject_name] = subject_played_conditions
+    self._subject_infos = json.load(open(self._subjects_file_path, 'r', newline=''))
 
   def get_subjects(self):
-    return self._subject_to_conditions_map.keys()
+    return [subject["name"] for subject in self._subject_infos]
 
   def get_conditions(self, subject):
-    return self._subject_to_conditions_map[subject]
+    subject_info = self._get_subject_info(subject)
+    video_paths = []
+    for condition_name in subject_info.get("played_conditions", []):
+      for condition_video in self._full_path_videos:
+        if condition_name in condition_video:
+          video_paths.append(condition_video)
+    return video_paths
 
   def is_subject_done(self, subject):
-    return len(self._subject_to_conditions_map[subject]) == 4
+    subject_info  = self._get_subject_info(subject)
+    return len(self._get_playable_conditions(subject_info)) == 0
 
-  def get_condition(self, subject):
-    # assign a random condition not before assigned to subject
-    subject_played_conditions = self._subject_to_conditions_map[subject]
-    non_played_conditions = list(set(self._full_path_videos) - set(subject_played_conditions))
-    condition_video_path = choice(non_played_conditions)
-    subject_played_conditions.append(condition_video_path)
-    return Condition(condition_video_path)
+  def get_unfinished_condition(self, subject):
+    # assign a random condition not before assigned to subject. the condition should also be unfinished
+    subject_played_conditions = self.get_conditions(subject)
+    subject_info = self._get_subject_info(subject)
+    playable_conditions = self._get_playable_conditions(subject_info)
+    played_conditions = subject_info.setdefault("played_conditions", {})
+    condition_video_path = choice(playable_conditions)
+    # update the played condition
+    # read the existing trial index or zero out
+    condition_name = self._condition_name_from_video(condition_video_path)
+    for condition, condition_desc in played_conditions.items():
+      if condition == condition_name:
+        next_trial_index = condition_desc["next_trial_index"]
+        break
+    else:
+      next_trial_index = 0
+    played_conditions[condition_name] = {"next_trial_index":next_trial_index}
+    return Condition(condition_video_path, next_trial_index)
+
+  def passed_trial(self, subject, condition):
+    # should be called whenever a subject passes a trial
+    subject_info = self._get_subject_info(subject)
+    subject_info["played_conditions"][self._condition_name_from_video(condition.video)]["next_trial_index"] += 1
 
   def save(self):
     # this should be called at the end of each condition (200 trials)
     with open(self._subjects_file_path, 'w', newline='') as subjects_writer:
-      subjects_csv_writer = csv.writer(subjects_writer)
-      for subject, conditions in self._subject_to_conditions_map.items():
-        video_names = [splitext(basename(condition))[0] for condition in conditions]
-        subjects_csv_writer.writerow([subject] + list(video_names))
+      json.dump(self._subject_infos, subjects_writer)
+
+  def _get_subject_info(self, subject):
+    for subject_info in self._subject_infos:
+      if subject_info["name"] == subject:
+        return subject_info
+
+  def _get_playable_conditions(self, subject_info):
+    # playable conditions are conditions never before played or has a trial index less than total trial count
+    # this returns the list of video names that can be played
+    playable_conditions = []
+    # first add never before played conditions
+    subject_played_condition_names = list(subject_info.get("played_conditions", {}).keys())
+    for full_path_video in self._full_path_videos:
+      condition_name = self._condition_name_from_video(full_path_video)
+      if condition_name in subject_played_condition_names:
+        next_trial_index = subject_info["played_conditions"][condition_name].get("next_trial_index", 0)
+        if next_trial_index < self._total_trial_count:
+          playable_conditions.append(full_path_video)
+      else:
+        # never before played condition
+        playable_conditions.append(full_path_video)
+    return playable_conditions
+
+  def _condition_name_from_video(self, video_path):
+    return splitext(basename(video_path))[0]
 
 def variablize_string(s):
   # convert "Hello World" to "hello_world"
@@ -75,10 +113,11 @@ def variablize_string(s):
 
 class Condition(object):
 
-  def __init__(self, video):
+  def __init__(self, video, next_trial_index=0):
     video_name = splitext(basename(video))[0]
     self.name = ' '.join([word.capitalize() for word in video_name.split('_')])
     self.video = video
+    self.next_trial_index = next_trial_index
 
   def get_associated_images(self):
     # each condition has 2 associated images.

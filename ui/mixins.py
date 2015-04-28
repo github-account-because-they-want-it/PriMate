@@ -12,7 +12,8 @@ class CustomTouchMixin(object):
 class CustomTouchWidgetMixin(CustomTouchMixin):
 
   def on_touch_down(self, touch):
-    if self.collide_point(*touch.pos):
+    if self.collide_point(*touch.pos) \
+        and not self.disabled: # fix a bug in kivy that even a disabled widget still receives touches
       self.dispatch("on_really_touch_down", touch)
     return super(CustomTouchWidgetMixin, self).on_touch_down(touch)
 

@@ -57,7 +57,7 @@ class TouchAwareWidget(CustomTouchWidgetMixin, Widget):
   pass
 
 class TouchAwareImage(CustomTouchWidgetMixin, Image):
-  pass
+ pass
 
 class TrialScreen(Screen):
 
@@ -72,16 +72,22 @@ class TrialScreen(Screen):
     self._condition = None
     self._image_left_card = None
     self._image_right_card = None
+    # a workaround for multiple card touch detections in trial screen
+    self._got_card_touch = False
 
   def left_card_selected(self, image, touch):
+    if self._got_card_touch: return
     self._enable_cards(False)
     self._image_right_card.opacity = 0
     self.dispatch("on_left_card_chosen", self._calculate_time_till_choice())
+    self._got_card_touch = True
 
   def right_card_selected(self, image, touch):
+    if self._got_card_touch: return
     self._enable_cards(False)
     self._image_left_card.opacity = 0
     self.dispatch("on_right_card_chosen", self._calculate_time_till_choice())
+    self._got_card_touch = True
 
   def on_left_card_chosen(self, time_taken):
     pass
@@ -125,6 +131,7 @@ class TrialScreen(Screen):
     self._image_right_card = image_place_right
 
   def on_enter(self):
+    self._got_card_touch = False
     self.ids.video_condition.state = "play"
     self._trial_start_time = datetime.now()
 
@@ -301,8 +308,10 @@ class PriMateApp(App):
 
 if __name__ == "__main__":
   from kivy.core.window import Window
+  """
   import tkinter
   root = tkinter.Tk()
   Window.fullscreen = True
   Window.size = (root.winfo_screenwidth(), root.winfo_screenheight())
+  """
   PriMateApp().run()

@@ -55,7 +55,6 @@ class SubjectManager(object):
 
   def get_unfinished_condition(self, subject):
     # assign a random condition not before assigned to subject. the condition should also be unfinished
-    subject_played_conditions = self.get_conditions(subject)
     subject_info = self._get_subject_info(subject)
     playable_conditions = self._get_playable_conditions(subject_info)
     played_conditions = subject_info.setdefault("played_conditions", {})

@@ -186,7 +186,7 @@ class ConditionCompleteScreen(Screen):
 class PriMateApp(App):
 
   _total_trial_count = 2
-  _inter_pellet_wait_seconds = 0.5
+  _inter_pellet_wait_seconds = 0.4
 
   def __init__(self, *args, **kwargs):
     super(PriMateApp, self).__init__(*args, **kwargs)
@@ -236,7 +236,7 @@ class PriMateApp(App):
 
   def on_left_card_chosen(self, screen, time_till_choice):
     # called from kv when left card chosen
-    self._update_trial_data(time_till_choice, "Green Card")
+    self._update_trial_data(time_till_choice, "Risky")
     count_pellets = int(next(self._csv_reader_non_risky)[0])
     self._dispense_pellets(count_pellets)
     self._count_left_card_chosen += 1
@@ -244,7 +244,7 @@ class PriMateApp(App):
 
   def on_right_card_chosen(self, screen, time_till_choice):
     # also called from kv. this is the risky card
-    self._update_trial_data(time_till_choice, "Red Card")
+    self._update_trial_data(time_till_choice, "Safe")
     count_pellets = int(next(self._csv_reader_risky)[0])
     self._dispense_pellets(count_pellets)
     self._count_right_card_chosen += 1
@@ -252,7 +252,7 @@ class PriMateApp(App):
 
   def _wait_till_five_seconds(self, count_pellets):
     # complete the time taken to dispense pellets up for 5 seconds
-    Clock.schedule_once(self._go_to_blank, 5 - self._inter_pellet_wait_seconds * count_pellets)
+    Clock.schedule_once(self._go_to_blank, 6 - self._inter_pellet_wait_seconds * count_pellets)
 
   def _go_to_blank(self, elapsed):
     self.root.current = "blank_screen"
@@ -308,10 +308,8 @@ class PriMateApp(App):
 
 if __name__ == "__main__":
   from kivy.core.window import Window
-  """
   import tkinter
   root = tkinter.Tk()
   Window.fullscreen = True
   Window.size = (root.winfo_screenwidth(), root.winfo_screenheight())
-  """
   PriMateApp().run()

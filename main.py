@@ -61,13 +61,15 @@ class TouchAwareImage(CustomTouchWidgetMixin, Image):
 
 class TrialScreen(Screen):
 
+  def _init_touch_count(self):
+    self._video_touches = 0
+    self._background_touches = 0
+
   def __init__(self, *args, **kwargs):
     super(TrialScreen, self).__init__(*args, **kwargs)
     self.register_event_type("on_left_card_chosen")
     self.register_event_type("on_right_card_chosen")
-    # bind all image places. 2 to left and right and the rest is background touches
-    self._video_touches = 0
-    self._background_touches = 0
+    self._init_touch_count()
     self._trial_start_time = None
     self._condition = None
     self._image_left_card = None
@@ -134,6 +136,7 @@ class TrialScreen(Screen):
     self._got_card_touch = False
     self.ids.video_condition.state = "play"
     self._trial_start_time = datetime.now()
+    self._init_touch_count()
 
   def on_video_touched(self, *args):
     self._video_touches += 1
@@ -185,7 +188,7 @@ class ConditionCompleteScreen(Screen):
 
 class PriMateApp(App):
 
-  _total_trial_count = 2
+  _total_trial_count = 200
   _inter_pellet_wait_seconds = 0.4
 
   def __init__(self, *args, **kwargs):
@@ -308,8 +311,10 @@ class PriMateApp(App):
 
 if __name__ == "__main__":
   from kivy.core.window import Window
+  """
   import tkinter
   root = tkinter.Tk()
   Window.fullscreen = True
   Window.size = (root.winfo_screenwidth(), root.winfo_screenheight())
+  """
   PriMateApp().run()

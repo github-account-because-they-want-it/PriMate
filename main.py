@@ -311,10 +311,8 @@ class PriMateApp(App):
 
 if __name__ == "__main__":
   from kivy.core.window import Window
-  """
   import tkinter
   root = tkinter.Tk()
   Window.fullscreen = True
   Window.size = (root.winfo_screenwidth(), root.winfo_screenheight())
-  """
   PriMateApp().run()

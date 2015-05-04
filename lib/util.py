@@ -52,10 +52,11 @@ class SubjectManager(object):
 
   def get_unfinished_condition(self, subject):
     # assign a random condition not before assigned to subject. the condition should also be unfinished
+    # this assumes that the caller knows what it's doing. it won't check if there's no conditions left
     subject_info = self._get_subject_info(subject)
     playable_conditions = self._get_playable_conditions(subject_info)
     played_conditions = subject_info.setdefault("played_conditions", {})
-    condition_video_path = choice(playable_conditions)
+    condition_video_path = playable_conditions[0] # choose highest priority (last_played) or just first
     # update the played condition
     # read the existing trial index or zero out
     condition_name = self._condition_name_from_video(condition_video_path)
@@ -65,13 +66,18 @@ class SubjectManager(object):
         break
     else:
       next_trial_index = 0
-    played_conditions[condition_name] = {"next_trial_index":next_trial_index}
+    # the last_played property should only exist for a single condition
+    played_conditions[condition_name] = {"next_trial_index": next_trial_index, "last_played": True}
     return Condition(condition_video_path, next_trial_index)
 
   def passed_trial(self, subject, condition):
     # should be called whenever a subject passes a trial
     subject_info = self._get_subject_info(subject)
-    subject_info["played_conditions"][self._condition_name_from_video(condition.video)]["next_trial_index"] += 1
+    condition_info = subject_info["played_conditions"][self._condition_name_from_video(condition.video)]
+    condition_info["next_trial_index"] += 1
+    # remove resumption possibility from condition when it's finished
+    if condition_info["next_trial_index"] == self._total_trial_count:
+      condition_info.pop("last_played", None)
 
   def save(self):
     # this should be called at the end of each condition (200 trials)
@@ -92,9 +98,14 @@ class SubjectManager(object):
     for full_path_video in self._full_path_videos:
       condition_name = self._condition_name_from_video(full_path_video)
       if condition_name in subject_played_condition_names:
-        next_trial_index = subject_info["played_conditions"][condition_name].get("next_trial_index", 0)
+        condition_info = subject_info["played_conditions"][condition_name]
+        next_trial_index = condition_info.get("next_trial_index", 0)
+        last_played = condition_info.get("last_played", False)
         if next_trial_index < self._total_trial_count:
           playable_conditions.append(full_path_video)
+        elif last_played:
+          # give last played condition a priority by inserting it first into playable conditions
+          playable_conditions.insert(0, full_path_video)
       else:
         # never before played condition
         playable_conditions.append(full_path_video)
@@ -140,3 +151,4 @@ class TrialData(object):
     self.video_touches = 0
     self.time_till_selection = None
     self.card_selected = None
+    self.pellets_dispensed = 0

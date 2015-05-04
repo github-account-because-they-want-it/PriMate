@@ -227,8 +227,9 @@ class PriMateApp(App):
     if len(self._subject_manager.get_conditions(self._current_subject)) == 0:
       with open(self._get_stats_file_name(), 'w') as stats_file:
         csv_writer = csv.writer(stats_file)
-        csv_writer.writerow(["Trial Index", "Date", "Time", "Subject", "Condition", "Card Selected", "Background Touches",
-                              "Video Touches", "Time till Choice (sec)"])
+        csv_writer.writerow(["Trial Index", "Date", "Time", "Subject", "Condition", "Card Selected",
+                             "Pellets Dispensed", "Background Touches",
+                             "Video Touches", "Time till Choice (sec)"])
     condition_subject = self._subject_manager.get_unfinished_condition(self._current_subject)
     self._index_current_trial = condition_subject.next_trial_index
     self._skip_payoff_lines()
@@ -239,16 +240,16 @@ class PriMateApp(App):
 
   def on_left_card_chosen(self, screen, time_till_choice):
     # called from kv when left card chosen
-    self._update_trial_data(time_till_choice, "Risky")
-    count_pellets = int(next(self._csv_reader_non_risky)[0])
+    count_pellets = int(next(self._csv_reader_risky)[0])
+    self._update_trial_data(time_till_choice, "Risky", count_pellets)
     self._dispense_pellets(count_pellets)
     self._count_left_card_chosen += 1
     self._wait_till_five_seconds(count_pellets)
 
   def on_right_card_chosen(self, screen, time_till_choice):
     # also called from kv. this is the risky card
-    self._update_trial_data(time_till_choice, "Safe")
-    count_pellets = int(next(self._csv_reader_risky)[0])
+    count_pellets = int(next(self._csv_reader_non_risky)[0])
+    self._update_trial_data(time_till_choice, "Safe", count_pellets)
     self._dispense_pellets(count_pellets)
     self._count_right_card_chosen += 1
     self._wait_till_five_seconds(count_pellets)
@@ -278,9 +279,10 @@ class PriMateApp(App):
       self._subject_manager.passed_trial(self._current_subject, self._current_condition)
     self._index_current_trial += 1
 
-  def _update_trial_data(self, time_till_choice, card_name):
+  def _update_trial_data(self, time_till_choice, card_name, pellets_dispensed):
     self._current_trial_data.time_till_selection = time_till_choice
     self._current_trial_data.card_selected = card_name
+    self._current_trial_data.pellets_dispensed = pellets_dispensed
     screen_trial = self.root.get_screen("trial")
     background_touches, video_touches = screen_trial.get_touches()
     self._current_trial_data.background_touches = background_touches
@@ -292,7 +294,7 @@ class PriMateApp(App):
       csv_writer = csv.writer(stats_file)
       trial = self._current_trial_data
       csv_writer.writerow([trial.trial_index + 1, trial.date, trial.time, trial.subject, trial.condition, trial.card_selected,
-                              trial.background_touches, trial.video_touches, trial.time_till_selection])
+                           trial.pellets_dispensed, trial.background_touches, trial.video_touches, trial.time_till_selection])
 
   def _get_stats_file_name(self):
     # stats file name should include the name of the current subject
@@ -311,8 +313,10 @@ class PriMateApp(App):
 
 if __name__ == "__main__":
   from kivy.core.window import Window
+  """
   import tkinter
   root = tkinter.Tk()
   Window.fullscreen = True
   Window.size = (root.winfo_screenwidth(), root.winfo_screenheight())
+  """
   PriMateApp().run()

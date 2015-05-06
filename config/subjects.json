@@ -1,1 +1,1 @@
-[{"name": "subject1"}, {"name": "subject2"}]
+[{"played_conditions": {"high_ranking": {"last_played": true, "next_trial_index": 11}}, "name": "subject1"}, {"name": "subject2"}]

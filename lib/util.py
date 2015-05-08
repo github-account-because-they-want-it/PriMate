@@ -103,12 +103,12 @@ class SubjectManager(object):
     playable_conditions = []
     # first add never before played conditions
     subject_played_condition_names = [condition["name"] for condition in self._get_played_conditions(subject_info)]
-    for full_path_video in self._full_path_videos:
-      condition_name = self._condition_name_from_video(full_path_video)
+    for condition in subject_info.get("conditions"):
+      condition_name = condition["name"]
+      full_path_video = self._video_from_condition_name(condition_name)
       if condition_name in subject_played_condition_names:
-        condition_info = self._get_condition_info(subject_info, condition_name)
-        next_trial_index = condition_info.get("next_trial_index", 0)
-        last_played = condition_info.get("last_played", False)
+        next_trial_index = condition.get("next_trial_index", 0)
+        last_played = condition.get("last_played", False)
         if next_trial_index < self._total_trial_count:
           playable_conditions.append(full_path_video)
         elif last_played:
@@ -128,8 +128,8 @@ class SubjectManager(object):
     return [condition_dict for condition_dict in subject_info.get("conditions") if
             condition_dict["name"] == condition_name][0]
 
-  def _condition_name_from_video(self, video_path):
-    return splitext(basename(video_path))[0]
+  def _video_from_condition_name(self, condition_name):
+    return [video_path for video_path in self._full_path_videos if condition_name in video_path][0]
 
 
 def variablize_string(s):

@@ -1,1 +1,42 @@
-[{"played_conditions": {"high_ranking": {"last_played": true, "next_trial_index": 11}}, "name": "subject1"}, {"name": "subject2"}]
+[
+  {
+    "name": "subject1",
+    "conditions": [
+      {
+        "next_trial_index": 7,
+        "name": "high_ranking",
+        "last_played": true,
+        "played": true
+      },
+      {
+        "name": "low_ranking"
+      },
+      {
+        "name": "nonsocial"
+      },
+      {
+        "name": "stranger"
+      }
+    ]
+  },
+  {
+    "name": "subject2",
+    "conditions": [
+      {
+        "next_trial_index": 0,
+        "name": "nonsocial",
+        "last_played": true,
+        "played": true
+      },
+      {
+        "name": "low_ranking"
+      },
+      {
+        "name": "high_ranking"
+      },
+      {
+        "name": "stranger"
+      }
+    ]
+  }
+]

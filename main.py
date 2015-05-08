@@ -262,6 +262,7 @@ class PriMateApp(App):
     self.root.current = "blank_screen"
     # keep the blank for 10 seconds
     Clock.schedule_once(self._restart_trial, 10)
+    self._subject_manager.passed_trial(self._current_subject, self._current_condition)
 
   def _dispense_pellets(self, count, tick_time=0):
     if count == 0: return
@@ -276,7 +277,6 @@ class PriMateApp(App):
     else:
       self._current_trial_data = TrialData(self._current_subject, self._index_current_trial, self._current_condition.name)
       self.root.current = "start_trial"
-      self._subject_manager.passed_trial(self._current_subject, self._current_condition)
     self._index_current_trial += 1
 
   def _update_trial_data(self, time_till_choice, card_name, pellets_dispensed):
@@ -315,6 +315,6 @@ if __name__ == "__main__":
   from kivy.core.window import Window
   import tkinter
   root = tkinter.Tk()
-  Window.fullscreen = True
   Window.size = (root.winfo_screenwidth(), root.winfo_screenheight())
+  Window.fullscreen = True
   PriMateApp().run()

@@ -1,0 +1,7 @@
+Usage
+======
+
+1- To add a new subject, append a new object `{"name":"mysubject"}` to the end of the outer list `[]`
+2- To order subject conditions, reorder their names within their containing list.
+   The subject conditions are added automatically for each subject after starting a trial for that subject.
+   But they can be added manually. Only the "name" property is necessary.
